@@ -1,31 +1,38 @@
 ---
 name: spring-ai-zhipuai
-description: Spring AI 프로젝트에 ZhipuAI 설정, Swagger 적용 및 테스트 실행
+description: Configure ZhipuAI, apply Swagger, and run tests in Spring AI projects
 ---
 
-# Spring AI ZhipuAI & Swagger 설정 스킬
+# Spring AI ZhipuAI & Swagger Configuration Skill
 
-이 스킬은 Spring AI 프로젝트를 ZhipuAI로 마이그레이션하고 Swagger를 설정하는 작업을 자동화합니다.
+This skill automates migrating Spring AI projects to ZhipuAI and configuring Swagger.
 
-## 사전 요구사항
+## Prerequisites
 
-- Kotlin 기반 Spring Boot 프로젝트
-- Gradle (Kotlin DSL 권장)
-- JDK 21 이상
-- ZhipuAI API Key ([ZhipuAI 플랫폼](https://open.bigmodel.cn/)에서 발급)
+- Kotlin-based Spring Boot project
+- Gradle (Kotlin DSL recommended)
+- JDK 21 or higher
+- ZhipuAI API Key (obtain from [ZhipuAI Platform](https://open.bigmodel.cn/))
 
-## 작업 단계
+## Steps
 
-### 1. Gradle Wrapper 업데이트
+### 1. Install/Update Gradle Wrapper (Run First!)
+
+> ⚠️ **Important**: This step must be executed first. The build will fail without Gradle Wrapper.
 
 ```bash
-# 프로젝트 디렉토리에서 실행
+# Run in project directory
 gradle wrapper --gradle-version=8.12
 ```
 
-### 2. build.gradle.kts 수정
+**Verification:**
 
-**JDK 21 설정:**
+- Check if `gradle/wrapper/gradle-wrapper.jar` exists
+- Verify `gradlew`, `gradlew.bat` scripts are executable
+
+### 2. Modify build.gradle.kts
+
+**JDK 21 Configuration:**
 
 ```kotlin
 java {
@@ -35,19 +42,19 @@ java {
 }
 ```
 
-**Spring AI ZhipuAI 의존성 추가:**
+**Add Spring AI ZhipuAI Dependency:**
 
 ```kotlin
 dependencies {
-    // Spring AI ZhipuAI (기존 Ollama/OpenAI 의존성 교체)
+    // Spring AI ZhipuAI (replace existing Ollama/OpenAI dependency)
     implementation("org.springframework.ai:spring-ai-starter-model-zhipuai:1.1.2")
 
-    // Swagger (SpringDoc OpenAPI) - Spring Boot 3.3.x 호환 버전
+    // Swagger (SpringDoc OpenAPI) - Compatible with Spring Boot 3.3.x
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
 }
 ```
 
-**Kotlin JVM Target 설정:**
+**Kotlin JVM Target Configuration:**
 
 ```kotlin
 tasks.withType<KotlinCompile> {
@@ -58,16 +65,16 @@ tasks.withType<KotlinCompile> {
 }
 ```
 
-### 3. application.yml 설정
+### 3. Configure application.yml
 
 ```yaml
 spring:
   ai:
     zhipuai:
-      api-key: ${ZHIPUAI_API_KEY} # 또는 직접 입력
+      api-key: ${ZHIPUAI_API_KEY} # or enter directly
       chat:
         options:
-          model: glm-4.7-flash # 또는 glm-4-air, glm-4.5, glm-4.6
+          model: glm-4.7-flash # or glm-4-air, glm-4.5, glm-4.6
           temperature: 0.7
 
 # SpringDoc OpenAPI (Swagger)
@@ -80,9 +87,11 @@ springdoc:
     operations-sorter: alpha
 ```
 
-### 4. Swagger 어노테이션 추가
+### 4. Add Swagger Annotations (with Testable Example Data)
 
-**Model 클래스에 @Schema 추가:**
+> 💡 **Example Data Guidelines**: Reference `*.http` files if available. Otherwise, refer to Controller comments (e.g., `POST http://localhost:8080/api/xxx Body: {...}`) or generate appropriate example data based on API logic.
+
+**Add @Schema to Model Classes (with example data):**
 
 ```kotlin
 import io.swagger.v3.oas.annotations.media.Schema
@@ -96,9 +105,17 @@ data class ParseRequest(
     )
     val question: String
 )
+
+@Schema(description = "카테고리 항목")
+data class CategoryItem(
+    @Schema(description = "카테고리 이름", example = "프로그래밍 언어")
+    val name: String,
+    @Schema(description = "항목 목록", example = "[\"Python\", \"Java\", \"JavaScript\"]")
+    val items: List<String>
+)
 ```
 
-**Controller에 @Tag, @Operation 추가:**
+**Add @Tag, @Operation to Controllers:**
 
 ```kotlin
 import io.swagger.v3.oas.annotations.Operation
@@ -120,27 +137,45 @@ class ExampleController {
 }
 ```
 
-### 5. 빌드 및 테스트
+**Example Data Format Tips:**
+
+| Field Type | Example Format                       |
+| ---------- | ------------------------------------ |
+| String     | `example = "text value"`             |
+| Int/Long   | `example = "123"`                    |
+| Boolean    | `example = "true"`                   |
+| List       | `example = "[\"item1\", \"item2\"]"` |
+| Object     | `example = "{\"key\": \"value\"}"`   |
+
+### 5. Build and Test
 
 ```bash
-# 빌드 테스트
+# Build test
 ./gradlew clean build -x test
 
-# 단위 테스트 실행
+# Run unit tests
 ./gradlew test
 
-# 애플리케이션 실행
+# Run application
 ./gradlew bootRun
-# 또는 환경변수로 API Key 전달
+# Or pass API Key via environment variable
 ZHIPUAI_API_KEY=your-api-key ./gradlew bootRun
 ```
 
-### 6. 검증
+### 6. Verification
 
 - **Swagger UI**: http://localhost:8080/swagger-ui.html
 - **API Docs (JSON)**: http://localhost:8080/api-docs
 
-**HTTP 테스트:**
+**Testing in Swagger UI:**
+
+1. Access Swagger UI
+2. Select API to test
+3. Click "Try it out" button
+4. Verify example data is auto-filled
+5. Click "Execute" button to test
+
+**HTTP Test:**
 
 ```bash
 curl -X POST http://localhost:8080/api/client/list/parse \
@@ -148,26 +183,34 @@ curl -X POST http://localhost:8080/api/client/list/parse \
   -d '{"question": "5가지 프로그래밍 언어를 나열해주세요"}'
 ```
 
-## 버전 호환성
+## Version Compatibility
 
-| 구성요소          | 권장 버전 |
-| ----------------- | --------- |
-| Spring Boot       | 3.3.x     |
-| Spring AI         | 1.1.2     |
-| SpringDoc OpenAPI | 2.5.0     |
-| Gradle            | 8.12+     |
-| JDK               | 21        |
+| Component         | Recommended Version |
+| ----------------- | ------------------- |
+| Spring Boot       | 3.3.x               |
+| Spring AI         | 1.1.2               |
+| SpringDoc OpenAPI | 2.5.0               |
+| Gradle            | 8.12+               |
+| JDK               | 21                  |
 
-## ZhipuAI 모델 옵션
+## ZhipuAI Model Options
 
-| 모델명          | 설명                 |
-| --------------- | -------------------- |
-| `glm-4.7-flash` | 빠른 응답, 일반 용도 |
-| `glm-4-air`     | 경량 모델            |
-| `glm-4.5`       | 표준 성능            |
-| `glm-4.6`       | 향상된 성능          |
+| Model Name      | Description                    |
+| --------------- | ------------------------------ |
+| `glm-4.7-flash` | Fast response, general purpose |
+| `glm-4-air`     | Lightweight model              |
+| `glm-4.5`       | Standard performance           |
+| `glm-4.6`       | Enhanced performance           |
 
-## 트러블슈팅
+## Troubleshooting
+
+### Gradle Wrapper Missing (GradleWrapperMain ClassNotFoundException)
+
+```bash
+# Error: java.lang.ClassNotFoundException: org.gradle.wrapper.GradleWrapperMain
+# Solution: Regenerate gradle wrapper
+gradle wrapper --gradle-version=8.12
+```
 
 ### Port Already in Use
 
@@ -175,13 +218,7 @@ curl -X POST http://localhost:8080/api/client/list/parse \
 lsof -ti:8080 | xargs kill -9
 ```
 
-### SpringDoc 호환성 오류
+### SpringDoc Compatibility Error
 
-- Spring Boot 3.3.x에서는 `springdoc-openapi-starter-webmvc-ui:2.5.0` 사용
-- 2.8.x 버전은 호환성 문제 발생
-
-### Gradle Wrapper 누락
-
-```bash
-gradle wrapper --gradle-version=8.12
-```
+- Use `springdoc-openapi-starter-webmvc-ui:2.5.0` for Spring Boot 3.3.x
+- Version 2.8.x causes compatibility issues (LiteWebJarsResourceResolver ClassNotFoundException)
