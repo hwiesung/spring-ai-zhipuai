@@ -21,7 +21,8 @@ This skill automates migrating Spring AI projects to ZhipuAI and configuring Swa
 > ⚠️ **Important**: This step must be executed first. The build will fail without Gradle Wrapper.
 
 ```bash
-# Run in project directory
+# Navigate to the folder containing the nearest gradle configuration file (build.gradle.kts or build.gradle)
+cd path/to/project
 gradle wrapper --gradle-version=8.12
 ```
 
